@@ -1,0 +1,181 @@
+---
+title: "Machine Learning Assignment 2"
+output:
+  pdf_document: default
+  html_document: default
+date: "10-02-2022"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+####Activating Packages
+```{r}
+
+library(psych) 
+library(caret)  
+library(FNN)    
+library(class)
+library(dplyr)
+```
+
+###importing data
+```{r}
+getwd()
+setwd("/Users/bharathreddy/Desktop")
+bharat <- read.csv("UniversalBank.csv")
+```
+
+```{r}
+#Eliminating variables [id & zip code] from the dataset
+df=subset(bharat, select=-c(ID, ZIP.Code ))
+```
+
+```{r}
+#creating dummies
+
+dummy_Education <- as.data.frame(dummy.code(df$Education))
+names(dummy_Education) <- c("Education_1", "Education_2","Education_3") 
+df_without_education <- subset(df, select=-c(Education))                
+
+UBank_data <- cbind(df_without_education, dummy_Education)             
+```
+
+###Data partition 
+```{r}
+set.seed(1234)
+Train_Index     = createDataPartition(UBank_data$Personal.Loan, p= 0.6 , list=FALSE)
+Train_Data      = UBank_data[Train_Index,]
+
+Validation_Data = UBank_data[-Train_Index,] 
+```
+
+###Generating test data
+```{r}
+Test_Data <- data.frame(Age=40 , Experience=10, Income = 84, Family = 2, CCAvg = 2, Education_1 = 0, Education_2 = 1, Education_3 = 0, Mortgage = 0, Securities.Account = 0, CD.Account = 0, Online = 1,  CreditCard = 1, stringsAsFactors = FALSE)
+```
+
+###Data Normalization
+```{r}
+train.norm.df    <- Train_Data
+valid.norm.df    <- Validation_Data
+test.norm.df     <- Test_Data
+maindata.norm.df <- UBank_data
+
+head(maindata.norm.df)
+
+# use preProcess() from the caret package to normalize .
+norm.values <- preProcess(Train_Data[,-7], method=c("center", "scale"))
+
+train.norm.df[,-7] <- predict(norm.values, Train_Data[,-7])  #Training Data
+valid.norm.df [,-7]<- predict(norm.values, Validation_Data[,-7])#Validation Data
+test.norm.df <- predict(norm.values, Test_Data)#Test Data
+maindata.norm.df[,-7] <- predict(norm.values,UBank_data[,-7]) #Training + Validation data
+
+head(maindata.norm.df)
+```
+
+###Perfoming k-NN classification , using k = 1
+```{r}
+set.seed(1234)
+prediction <- knn(train = train.norm.df[,-7], test = valid.norm.df[,-7], 
+          cl = train.norm.df[,7], k = 1, prob=TRUE) 
+actual= valid.norm.df$Personal.Loan
+prediction_prob = attr(prediction,"prob")
+table(prediction,actual)  
+mean(prediction==actual)  
+```
+
+```{r}
+accuracy.df <- data.frame(k = seq(1, 30, 1), accuracy = rep(0, 30))
+
+
+for(i in 1:30) {
+prediction <- knn(train = train.norm.df[,-7], test = valid.norm.df[-7], 
+          cl = train.norm.df[,7], k = i, prob=TRUE) 
+
+accuracy.df[i,2] <- mean(prediction==actual)
+}
+accuracy.df  
+
+```
+The value of k we choose is 1 as it is given in the question.
+
+####Validation data results using best k value [i.e: k = 1]
+```{r}
+set.seed(1234)
+prediction <- knn(train = train.norm.df[,-7], test = valid.norm.df[,-7], 
+          cl = train.norm.df[,7], k = 1, prob=TRUE) 
+actual= valid.norm.df$Personal.Loan
+prediction_prob = attr(prediction,"prob")
+
+table(prediction,actual)  
+
+```
+
+
+```{r}
+prediction_test <- knn(train = maindata.norm.df[,-7], test = Test_Data, 
+          cl = maindata.norm.df[,7], k = 1, prob=TRUE) 
+head(prediction_test)
+```
+k-NN model predicted that the new customer will accept a loan offer.
+ 
+
+```{r}
+#Partitioning the data into Traning(50%) ,Validation(30%), Test(20%)
+set.seed(1234)
+
+Test_Index_1 = createDataPartition(UBank_data$Age, p= 0.2 , list=FALSE) 
+Test_Data_1  = UBank_data [Test_Index_1,]
+
+Rem_DATA = UBank_data[-Test_Index_1,]
+
+Train_Index_1 = createDataPartition(Rem_DATA$Age, p= 0.5 , list=FALSE)
+Train_Data_1 = Rem_DATA[Train_Index_1,] #Training data
+
+Validation_Data_1 = Rem_DATA[-Train_Index_1,] #Validation data
+```
+
+```{r}
+#Data Normalization
+
+train.norm.df_1 <- Train_Data_1
+valid.norm.df_1 <- Validation_Data_1
+test.norm.df_1 <- Test_Data_1
+rem_data.norm.df_1 <- Rem_DATA
+
+norm.values_1 <- preProcess(Train_Data_1[-7], method=c("center", "scale"))
+
+train.norm.df_1[-7] <- predict(norm.values_1, Train_Data_1[-7])  #Training Data
+valid.norm.df_1[-7] <- predict(norm.values_1, Validation_Data_1[-7])#Validation Data
+test.norm.df_1[-7] <- predict(norm.values_1, test.norm.df_1[-7]) #Test Data
+test.norm.df_1[-7] <- predict(norm.values_1, Test_Data_1[-7])
+rem_data.norm.df_1[-7] <- predict(norm.values_1,Rem_DATA[-7]) 
+
+head(test.norm.df_1)
+```
+
+```{r}
+#Perfoming k-NN classification on Training Data, k = 1
+set.seed(1234)
+prediction_Q5 <- knn(train = train.norm.df_1[,-7], test = valid.norm.df_1[,-7], 
+          cl = train.norm.df_1[,7], k = 1, prob=TRUE) 
+actual= valid.norm.df_1$Personal.Loan
+prediction_prob = attr(prediction_Q5,"prob")
+
+table(prediction_Q5,actual)  #confusion matrix for the best k value =1
+mean(prediction_Q5==actual)  #accuracy of the best k=1
+```
+
+```{r}
+set.seed(1234)
+prediction_Q5 <- knn(train = rem_data.norm.df_1[,-7], test = test.norm.df_1[,-7], 
+          cl = rem_data.norm.df_1[,7], k = 1, prob=TRUE) 
+actual= test.norm.df_1$Personal.Loan
+prediction_prob = attr(prediction_Q5,"prob")
+
+table(prediction_Q5,actual)  #confusion matrix for the best k value =1
+```
