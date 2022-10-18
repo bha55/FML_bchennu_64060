@@ -1,0 +1,117 @@
+---
+title: "Assignment_3"
+output:
+  word_document: default
+  pdf_document: default
+date: "2022-10-17"
+pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(caret)
+library(e1071)
+library(class)
+library(tidyverse)
+```
+
+
+
+```{r}
+#Importing dataset.
+universaldata <- read.csv("UniversalBank.csv")
+str(universaldata)
+```
+
+
+
+```{r}
+#Converting integer Variables to Factor Variables.
+
+universaldata$Personal.Loan <- as.factor(universaldata$Personal.Loan)
+universaldata$Online <- as.factor(universaldata$Online)
+universaldata$CreditCard <- as.factor(universaldata$CreditCard)
+
+str(universaldata)
+```
+
+
+```{r}
+#Data partition into Training and validation into 60% and 40% respectively.
+
+set.seed(123)
+
+index_train <- createDataPartition(universaldata$Personal.Loan, p=0.60, list = FALSE)
+train <- universaldata[index_train,]
+validate <- universaldata[-index_train,]
+
+```
+
+
+```{r}
+#Normalization of data for current dataset
+universal_norm <- preProcess(train[,-c(10,13,14)], method = "center", "scale")
+universal_tpredict <- predict(universal_norm, train)
+universal_vpredict <- predict(universal_norm, validate)
+```
+
+
+```{r}
+#A. Pivot table for Personal.Loan, Online, CreditCard.
+ptable <- ftable(universal_tpredict$Personal.Loan, universal_tpredict$Online, universal_tpredict$CreditCard, dnn=c('Personal.loan', 'CreditCard', 'Online'))
+ptable
+```
+
+#B.Probability of Loan=1, Online=1, CreditCard=1 is: 51/467+51 = 0.09845559845
+
+
+```{r}
+#C.Two tables for personal loan:online and personal loan:credit card
+
+ptable1 <- ftable(universal_tpredict$Personal.Loan, universal_tpredict$Online, dnn=c('Personal.loan','Online'))
+ptable1
+
+ptable2 <- ftable(universal_tpredict$Personal.Loan, universal_tpredict$CreditCard, dnn=c('Personal.loan','CreditCard'))
+ptable2
+```
+
+#D.(i).P(CC=1 | Loan= 1) = 84/288=0.2916667
+
+#D.(ii).P(Online=1 | Loan=1)=176/288=0.611111
+
+#D.(iv).P(CC=1 | Loan=0)= 777/2712= 0.2865044
+
+#D.(v).P(Online=1 | Loan=0)= 1611/2712= 0.5940265
+
+
+```{r}
+#D.(iii).P(Loan=1),(vi).P(Loan=0)
+ptable3 <-ftable(universal_tpredict$Personal.Loan, dnn= 'Personal.loan')
+ptable3
+
+#P(Loan=1)= 288/3000= 0.096
+#P(Loan=0)= 2712/3000= 0.904
+```
+
+
+```{r}
+#E.Calculating Naive Bayes from above.
+#Naive Bayes= 0.2916667*0.611111*0.096/(0.2916667*0.611111*0.096+0.2865044*0.5940265*0.904) = 0.10008607928
+```
+
+
+#F.The probability from B. is 0.09845559845 and E. 0.10008607928. The answer from E. higher than B.
+
+
+```{r}
+#G.Running naives bayes directly on data set.
+naive <- naiveBayes(Personal.Loan~Online+CreditCard, data = universal_tpredict)
+naive
+
+#The probability derived from E. is equal to the answer derived in G.
+```
+
