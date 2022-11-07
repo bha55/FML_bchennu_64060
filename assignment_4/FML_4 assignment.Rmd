@@ -1,0 +1,89 @@
+---
+title: "Assignment 4"
+output:
+  word_document: default
+  pdf_document: default
+date: "2022-11-06"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(caret)
+library(tidyverse)
+library(factoextra)
+set.seed(123)
+```
+
+```{r}
+getwd()
+setwd("/Users/bharathreddy/Downloads")
+k_mean<-read.csv("Pharmaceuticals.csv")
+```
+
+
+#1.a. Use only the numerical variables (1 to 9) to cluster the 21 firms. Justify the various choices made in conducting the cluster analysis, such as weights for different variables, the specific clustering algorithm(s) used, the number of clusters formed, and so on.
+```{r}
+data_frame <- k_mean[,c(3:11)]
+norm_scale <- scale(data_frame)
+```
+
+#finding optiomal k value 
+```{r}
+
+fviz_nbclust(norm_scale, kmeans, method = "wss")
+fviz_nbclust(norm_scale, kmeans, method = "silhouette")
+
+```
+
+
+# found kmeans using above methods 
+```{r}
+df1 <- kmeans(norm_scale, centers = 2, nstart = 25)
+df1$centers
+
+df2 <- kmeans(norm_scale, centers = 5, nstart = 25)
+df1$centers
+```
+
+# plotting cluster
+```{r}
+fviz_cluster(df1, data= norm_scale)
+fviz_cluster(df2, data= norm_scale)
+```
+
+#using silhouette method where k=5 to interpret clusters.
+
+#3.Is there a pattern in the clusters with respect to the numerical variables (10 to 12)? (those not used in
+forming the clusters)
+```{r}
+cluster<- df2$cluster
+cluster_group<-cbind(k_mean, cluster)
+cluster_group
+```
+# finding mean value using aggregate function.
+```{r}
+aggregate(cluster_group[,-c(1,2,12:14)],by=list(cluster_group$cluster),FUN="mean")
+```
+#2.Interpret the clusters with respect to the numerical variables used in forming the clusters.
+# cluster 1 has highest market_cap,asset_turnover,ROE,ROA where Beta,PE_RATIO has lower values.
+# cluster 2 has highest PE_RATIO and lowest in ASSET_TURNOVER and Beta.
+# cluster 3 has highest PE_RATIO,ROE and Market_cap where as Asset_turnover is lowest of all.
+# cluster 4 has the lowest Leverage,Beta and highest Market_cap,ROE.
+# cluster 5 has lowest Beta ,leverage and highets PE_ratio,Market_cap.
+
+#3.Is there a pattern in the clusters with respect to the numerical variables (10 to 12)? (those not used in
+# cluster 1 with lowest in beta and PE_RATIO has majority of HOLD and moderate sell.
+# cluster 2 with highest PE_RATIO has both HOLD and moderate buy.
+# cluster 3 with lower Asset_turnover has equal moderate buy and moderate sell pattern.
+# cluster 4 with highest market_cap has same praportion of moderate buy and HOLD.
+# cluster 5 with lowest Beta has HOLD and moderate buy.
+
+#4.Provide an appropriate name for each cluster using any or all of the variables in the dataset.
+# cluster 1 has most of holds hence Hold cluster.
+# cluster 2 with lowest Asset_turnover is Hold or moderate buy cluster.
+# cluster 3 with equal pattern is either moderate buy or moderate sell cluster.
+# cluster 4 will be moderate buy/Hold cluster.
+# cluster 4 with lowest Beta highest Market_cap cluster or Hold/moderate buy cluster.
